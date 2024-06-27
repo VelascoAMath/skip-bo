@@ -422,7 +422,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                             # Game rules state that each player gets 30 cards when there are 2-4 players
                             # or 20 cards when there are 5-6 players
                             if len(players) <= 4:
-                                while len(player.stock) < 3:
+                                while len(player.stock) < 30:
                                     player.stock.append(deck.pop())
                             else:
                                 while len(player.stock) < 20:
