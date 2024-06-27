@@ -55,6 +55,15 @@ function App() {
         break;
       case 'create_user':
         socket.send(JSON.stringify({"type": "get_users"}));
+        const user = data["user"];
+        dispatch({type: "change-input", key: "user_id", value: user.id});
+        dispatch({type: "change-input", key: "user_name", value: user.name});
+        dispatch({type: "change-input", key: "user_token", value: user.token});
+        localStorage.setItem("user_id", user.id);
+        localStorage.setItem("user_name", user.name);
+        localStorage.setItem("user_token", user.token);
+
+
         break;
       case 'get_room':
         setRoom(data["game"]);
