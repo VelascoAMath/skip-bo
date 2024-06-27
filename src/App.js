@@ -5,10 +5,11 @@ import { Link, Route, Switch } from 'wouter';
 import Create_User from './Create_User';
 import Login from './Login';
 import Lobby from './Lobby';
+import GameRoom from './GameRoom';
 
 
 
-const socket = new WebSocket("ws://localhost:8002");
+const socket = new WebSocket("ws://172.16.28.211:8002");
 
 export function sendSocket(message){
   socket.send(JSON.stringify(message));
@@ -37,6 +38,19 @@ function App() {
     sendSocket({"type": "get_users"});
     sendSocket({"type": "get_games"});
   }
+
+
+  // Update the room if it's outdated or not 
+  if(socket.readyState === socket.OPEN){
+    
+    if(state.game_id){
+      if(state["user_id"] === undefined || state["game_id"] === undefined || state["game"] === undefined || state["players"] === undefined){
+        sendSocket({type: "get_room", game_id: state.game_id, user_id: state["user_id"]});
+      } else if(state["user_id"] === null || state["game_id"] === null || state["game"] === null || state["players"] === null){
+        sendSocket({type: "get_room", game_id: state.game_id, user_id: state["user_id"]});
+      }
+    }
+  }
   
   // Listen for messages
   socket.onmessage = (event) => {
@@ -64,8 +78,19 @@ function App() {
         sendSocket({"type": "get_games"});
         break;
       case 'get_room':
-        // setRoom(data["game"]);
-        // setPlayerList(data["players"]);
+        // See if we're getting someone else's data
+        if(state.player && state?.player.game_id !== data.player.game_id) {
+          sendSocket({type: "get_room", game_id: state.player.game_id, user_id: state.player.user_id});
+        } else if (state.player && state?.player.user_id !== data.player.user_id) {
+          sendSocket({type: "get_room", game_id: state.player.game_id, user_id: state.player.user_id});
+        } 
+        else {
+          dispatch({type: "change-input", key: "game", value: data.game});
+          dispatch({type: "change-input", key: "players", value: data.players});
+          dispatch({type: "change-input", key: "player", value: data.player});
+        }
+        break;
+      case 'acceptance':
         break;
       case 'rejection':
         alert(data["message"]);
@@ -91,6 +116,7 @@ function App() {
 
       </div>
       <Route path="/">
+      <div style={{color: "white"}}>
         <h1>
           <Link href='/user'>Create User</Link>
         </h1>
@@ -100,6 +126,7 @@ function App() {
         <h1>
           <Link href='/lobby'>Go To Lobby</Link>
         </h1>
+      </div>
       </Route>
 
       <Route path="/user">
@@ -110,6 +137,9 @@ function App() {
       </Route>
       <Route path="/lobby">
         <Lobby props={{state, dispatch, socket}}/>
+      </Route>
+      <Route path="/game/:id">
+        <GameRoom props={{state, dispatch, socket}}/>
       </Route>
     </div>
   )

@@ -23,6 +23,15 @@ export default function Login({props}){
                         localStorage.setItem("user_id", user.id);
                         localStorage.setItem("user_name", user.name);
                         localStorage.setItem("user_token", user.token);
+
+                        // Delete everything associated with the game
+                        dispatch({type: "delete-key", key: "game"});
+                        dispatch({type: "delete-key", key: "players"});
+                        dispatch({type: "delete-key", key: "player"});
+                        localStorage.removeItem("game");
+                        localStorage.removeItem("players");
+                        localStorage.removeItem("player");
+
                         }}>
                         {user.name}
                     </button>})} 

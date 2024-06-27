@@ -4,6 +4,31 @@ body {
   font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
+h3 {
+  background-color: red;
+  margin: 10px;
+}
+
+.card {
+  border-color: white;
+  border-width: 0.5px;
+  border-style: solid;
+  width: 15px;
+  height: 20px;
+  font-size: x-small;
+  border-radius: 2px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;
+}
+
+.lay-horizontally {
+  display: flex;
+  flex-direction: row;
+}
+
 .user-list {
   display: flex;
   justify-content: center;
@@ -36,31 +61,35 @@ body {
   color: whitesmoke;
 }
 
+.players-in-room-view {
+  display: flex;
+  width: 100%;
+  overflow-x: scroll;
+}
+.players-in-room-view .player-view {
+  border: orange 1px solid;
+  width: 100%;
+}
+
 .card-collection {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  column-gap: 5px;
 }
 .card-collection .card {
   border-color: white;
   border-width: 0.5px;
   border-style: solid;
-  width: 70px;
-  height: 100px;
-  border-radius: 10px;
+  width: 15px;
+  height: 20px;
+  font-size: x-small;
+  border-radius: 2px;
   flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 20px;
   text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;
-}
-@media (width < 992px) {
-  .card-collection .card {
-    width: 3.5rem;
-    height: 4rem;
-    font-size: large;
-  }
 }
 .card-collection .wild {
   background: linear-gradient(90deg, red 0%, blue 33%, yellow 66%, green 100%);
@@ -76,7 +105,6 @@ body {
   display: flex;
   flex-direction: column;
   row-gap: 10px;
-  position: fixed;
   width: 100%;
   left: 0;
   top: 0;
@@ -84,16 +112,11 @@ body {
 .build-piles .discard-pile {
   display: flex;
   align-items: center;
-  min-height: 100px;
+  min-height: 20px;
   background-color: purple;
 }
-@media (width < 992px) {
-  .build-piles .discard-pile {
-    min-height: 4rem;
-  }
-}
 .build-piles .selected {
-  border: aqua solid 5px;
+  border: aqua solid 2px;
 }
 
 .discard-piles {
@@ -114,6 +137,15 @@ body {
 }
 .discard-piles .selected {
   border: aqua solid 5px;
+}
+
+.hand {
+  display: flex;
+  flex-direction: row;
+}
+.hand .card {
+  height: 50px;
+  width: 30px;
 }
 
 /*# sourceMappingURL=App.css.map */

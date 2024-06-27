@@ -64,13 +64,13 @@ export default function Lobby({props}) {
                                 if(!inProgress){
                                     sendSocket({type: "start_game", game_id: game.id, user_id: state.user_id});
                                 }
-                                setLocation("/player/" + game.id);
+                                setLocation("/game/" + game.id);
 
                             }
                             return <button onClick={onClick}>Play</button>
                         }
                         if(!isOwner && inGame && inProgress){
-                            return <button onClick={() => { setLocation("/player/" + game.id)}}>Play</button>
+                            return <button onClick={() => { setLocation("/game/" + game.id)}}>Play</button>
                         }
 
                         if(!isOwner && inGame && !inProgress){
