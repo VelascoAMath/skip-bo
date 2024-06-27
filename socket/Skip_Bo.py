@@ -85,27 +85,52 @@ def get_games():
     return game_list
 
 
-def get_game_state(game_id):
-    game = Game.get_by_id(game_id)
+def get_game_state(player_id: str | uuid.UUID):
+    player = Player.get_by_id(player_id)
+    game = Game.get_by_id(player.game_id)
     game_json = game.to_json_dict()
-
+    
     game_json["build_piles"] = [gb.to_json_dict() for gb in GameBuild.all_where_game_id(game.id)]
     game_json["build_piles"].sort(key=lambda x: x["sort_key"])
-
+    
+    del game_json["deck"]
+    del game_json["discard"]
+    
+    player_json = player.to_json_dict()
+    player_json["name"] = User.get_by_id(player.user_id).name
+    
+    player_json["stock_size"] = len(player_json["stock"])
+    # Only reveal the top stock card
+    if len(player_json["stock"]) != 0:
+        player_json["stock"] = [player_json["stock"][-1]]
+    
+    # Get the discard piles and sort them
+    player_json["discard_piles"] = [pd.to_json_dict() for pd in
+                                    PlayerDiscard.all_where_player_id(player.id)]
+    player_json["discard_piles"].sort(key=lambda x: x["sort_key"])
+    
     players = Player.all_where_game_id(game.id)
     players.sort(key=lambda p: p.turn_index)
     player_list = []
-    for player in players:
-        player_json = player.to_json_dict()
-        player_json["name"] = User.get_by_id(player.user_id).name
+    for player_mini in players:
+        player_mini_json = player_mini.to_json_dict()
+        player_mini_json["name"] = User.get_by_id(player_mini.user_id).name
         # Get the discard piles and sort them
-        player_json["discard_piles"] = [pd.to_json_dict() for pd in
-                                        PlayerDiscard.all_where_player_id(player.id)]
-        player_json["discard_piles"].sort(key=lambda x: x["sort_key"])
-        player_list.append(player_json)
-
+        player_mini_json["discard_piles"] = [pd.to_json_dict() for pd in
+                                             PlayerDiscard.all_where_player_id(player_mini.id)]
+        player_mini_json["discard_piles"].sort(key=lambda x: x["sort_key"])
+        
+        del player_mini_json["hand"]
+        player_mini_json["stock_size"] = len(player_mini_json["stock"])
+        if len(player_mini_json["stock"]) == 0:
+            player_mini_json["stock"] = []
+        else:
+            player_mini_json["stock"] = [player_mini_json["stock"][-1]]
+        player_mini_json["name"] = User.get_by_id(player_mini.user_id).name
+        player_list.append(player_mini_json)
+    
     return json.dumps({"type": "get_room", "game": game_json,
-                       "players": player_list})
+                       "players": player_list, "player": player_json})
 
 
 def replenish_player_hand(player: Player, game: Game):
