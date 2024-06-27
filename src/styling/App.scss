@@ -10,6 +10,19 @@ body {
 }
 
 
+.user-list {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    
+    .user {
+        border: aliceblue solid 2px;
+        padding: 10px;
+    }
+}
+
+
 .game-list{
     display: flex;
     flex-wrap: wrap;
