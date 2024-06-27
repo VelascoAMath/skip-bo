@@ -1,0 +1,106 @@
+body {
+  background-color: navy;
+  color: white;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.game-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.game-list .game {
+  background-color: aqua;
+  color: black;
+  width: 100px;
+  border-radius: 5px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+}
+.game-list .game.selected {
+  background-color: rebeccapurple;
+  color: whitesmoke;
+}
+
+.card-collection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.card-collection .card {
+  border-color: white;
+  border-width: 0.5px;
+  border-style: solid;
+  width: 70px;
+  height: 100px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;
+}
+@media (width < 992px) {
+  .card-collection .card {
+    width: 3.5rem;
+    height: 4rem;
+    font-size: large;
+  }
+}
+.card-collection .wild {
+  background: linear-gradient(90deg, red 0%, blue 33%, yellow 66%, green 100%);
+  color: white;
+  text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;
+}
+.card-collection .selected {
+  border: turquoise 5px solid;
+  font-size: x-large;
+}
+
+.build-piles {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+  position: fixed;
+  width: 100%;
+  left: 0;
+  top: 0;
+}
+.build-piles .discard-pile {
+  display: flex;
+  align-items: center;
+  min-height: 100px;
+  background-color: purple;
+}
+@media (width < 992px) {
+  .build-piles .discard-pile {
+    min-height: 4rem;
+  }
+}
+.build-piles .selected {
+  border: aqua solid 5px;
+}
+
+.discard-piles {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+}
+.discard-piles .discard-pile {
+  display: flex;
+  align-items: center;
+  min-height: 100px;
+  background-color: red;
+}
+@media (width < 992px) {
+  .discard-piles .discard-pile {
+    min-height: 4rem;
+  }
+}
+.discard-piles .selected {
+  border: aqua solid 5px;
+}
+
+/*# sourceMappingURL=App.css.map */
