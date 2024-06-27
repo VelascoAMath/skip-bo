@@ -3,6 +3,7 @@ import './App.css';
 import inputReducer from './InputReducer';
 import { Link, Route, Switch } from 'wouter';
 import Create_User from './Create_User';
+import Login from './Login';
 
 
 
@@ -13,19 +14,23 @@ export function sendSocket(message){
 }
 
 
+const initState = {
+  user_id: localStorage.getItem("user_id"),
+  user_name: localStorage.getItem("user_name"),
+  user_token: localStorage.getItem("user_token"),
+}
 
 
 function App() {
   const [gameList, setGameList] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
-  const [userName, setUserName] = useState("");
   const [room, setRoom] = useState(null);
   const [playerList, setPlayerList] = useState(null);
   const [socketClosed, setSocketClosed] = useState(false);
   
   
-  const [state, dispatch] = useReducer(inputReducer, {});
-    
+  const [state, dispatch] = useReducer(inputReducer, initState);
+
   if (socketClosed){
     return <div>Socket closed</div>
   }
@@ -70,6 +75,13 @@ function App() {
 
   return (
     <div style={{display: "flex", flexDirection: "column", rowGap: "20px", textAlign: "center"}}>
+      <div style={{display: "flex", justifyContent: "space-around", backgroundColor: "white", color: "purple"}}>
+        {state?.user_name && <div>{state?.user_name}</div>}
+        {!(state?.user_name) && <div style={{color: "red"}}>Guest</div>}
+        <Link href="/">Home</Link>
+        <div></div>
+
+      </div>
       <Route path="/">
         <h1>
           <Link href='/user'>Create User</Link>
@@ -84,6 +96,9 @@ function App() {
 
       <Route path="/user">
         <Create_User props={{state, dispatch, socket}}/>
+      </Route>
+      <Route path="/login">
+        <Login props={{state, dispatch, socket}}/>
       </Route>
     </div>
   )
