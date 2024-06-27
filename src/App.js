@@ -4,6 +4,7 @@ import inputReducer from './InputReducer';
 import { Link, Route, Switch } from 'wouter';
 import Create_User from './Create_User';
 import Login from './Login';
+import Lobby from './Lobby';
 
 
 
@@ -22,10 +23,6 @@ const initState = {
 
 
 function App() {
-  const [gameList, setGameList] = useState([]);
-  const [selectedGame, setSelectedGame] = useState(null);
-  const [room, setRoom] = useState(null);
-  const [playerList, setPlayerList] = useState(null);
   const [socketClosed, setSocketClosed] = useState(false);
   
   
@@ -51,7 +48,7 @@ function App() {
         dispatch({type: "change-input", key: "user_list", value: data["users"]});
         break;
         case 'get_games':
-        setGameList(data["games"]);
+          dispatch({type: "change-input", key: "games", value: data["games"]});
         break;
       case 'create_user':
         socket.send(JSON.stringify({"type": "get_users"}));
@@ -62,17 +59,19 @@ function App() {
         localStorage.setItem("user_id", user.id);
         localStorage.setItem("user_name", user.name);
         localStorage.setItem("user_token", user.token);
-
-
+        break;
+      case 'delete_game':
+        sendSocket({"type": "get_games"});
         break;
       case 'get_room':
-        setRoom(data["game"]);
-        setPlayerList(data["players"]);
+        // setRoom(data["game"]);
+        // setPlayerList(data["players"]);
         break;
       case 'rejection':
         alert(data["message"]);
         break;
       default:
+        console.log(data);
         console.log("Unrecognized!");
 
     }
@@ -108,6 +107,9 @@ function App() {
       </Route>
       <Route path="/login">
         <Login props={{state, dispatch, socket}}/>
+      </Route>
+      <Route path="/lobby">
+        <Lobby props={{state, dispatch, socket}}/>
       </Route>
     </div>
   )

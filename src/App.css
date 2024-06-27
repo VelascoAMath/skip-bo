@@ -28,6 +28,9 @@ body {
   text-align: center;
   cursor: pointer;
 }
+.game-list .game button {
+  width: 100%;
+}
 .game-list .game.selected {
   background-color: rebeccapurple;
   color: whitesmoke;

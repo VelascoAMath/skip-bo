@@ -72,9 +72,6 @@ class Game:
     def save(self) -> None:
         pass
 
-    def delete(self) -> None:
-        pass
-
 
 def main():
     deck = CardCollection(Card.getNewDeck())

@@ -379,6 +379,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                 game.delete()
                 conn.commit()
                 game_list = get_games()
+                await websocket.send(json.dumps({"type": "delete_game"}))
                 websockets.broadcast(connected, json.dumps({"type": "get_games", "games": game_list}))
 
             case "join_game":
@@ -479,6 +480,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                         game.save()
                         conn.commit()
                         await websocket.send(json.dumps({"type": "start_game", "game_id": str(game.id)}))
+                        websockets.broadcast(connected, json.dumps({"type": "get_games", "games": get_games()}))
             case "get_room":
                 game_id = message["game_id"]
 

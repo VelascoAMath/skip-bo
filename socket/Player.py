@@ -49,7 +49,6 @@ class Player:
     
     @staticmethod
     def from_json_dict(data):
-        print(data)
         return Player(
             id=uuid.UUID(data["id"]),
             game_id=uuid.UUID(data["game_id"]),
