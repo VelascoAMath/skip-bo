@@ -508,21 +508,23 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                         websockets.broadcast(connected, json.dumps({"type": "get_games", "games": get_games()}))
             case "get_room":
                 game_id = message["game_id"]
-
-                game_id_to_socket[game_id].add(websocket)
-
-                await websocket.send(get_game_state(game_id))
-
+                user_id = message["user_id"]
+                player = Player.get_by_game_id_user_id(game_id, user_id)
+                
+                game_id_to_socket[player.id].add(websocket)
+                
+                await websocket.send(get_game_state(player.id))
+            
             case "sort_hand":
                 player_id = message["player_id"]
                 player = Player.get_by_id(player_id)
                 player.hand.sort(key=lambda c: c.rank.value)
                 player.save()
-                await websocket.send(get_game_state(player.game_id))
+                await websocket.send(get_game_state(player.id))
             case _:
                 await websocket.send(json.dumps(process_player_move(message=message)))
-                for game_id, sockets in game_id_to_socket.items():
-                    websockets.broadcast(sockets, get_game_state(game_id))
+                for player_id, sockets in game_id_to_socket.items():
+                    websockets.broadcast(sockets, get_game_state(player_id))
         conn.commit()
 
     connected.remove(websocket)
