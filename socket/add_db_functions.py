@@ -6,6 +6,7 @@ import psycopg2
 
 VERBOSE = False
 
+
 def add_db_functions(*args, **kwargs):
     db_name = kwargs["db_name"]
     
@@ -18,7 +19,7 @@ def add_db_functions(*args, **kwargs):
         single_foreign = kwargs["single_foreign"]
     else:
         single_foreign = set()
-        
+    
     if "plural_foreign" in kwargs:
         plural_foreign = kwargs["plural_foreign"]
     else:
@@ -140,7 +141,7 @@ def add_db_functions(*args, **kwargs):
                 id = str(id)
             
             cls.cur.execute(f"SELECT * FROM {db_name} WHERE id=%s", (id,))
-
+            
             sql_tuple = cls.cur.fetchone()
             if sql_tuple is None:
                 raise Exception(cls.cur.mogrify(f"SELECT * FROM {db_name} WHERE id=%s", (id,)))
@@ -200,19 +201,19 @@ def add_db_functions(*args, **kwargs):
                 return get_item
             
             setattr(cls, f"get_{key_name}", get_item_by_name(key_name))
-
         
         for (key_name, item_name, other_cls) in plural_foreign:
             def get_items_by_name(key_name, other_cls):
                 
-                def get_item(self):
+                def get_item(id):
                     command = f"SELECT distinct on ({other_cls._db_name}.id) {other_cls._db_name}.* FROM {db_name} JOIN {other_cls._db_name} ON {db_name}.{key_name} = {other_cls._db_name}.id WHERE {other_cls._db_name}.id = %s;"
                     if VERBOSE:
-                        print(cls.cur.mogrify(command, (str(getattr(self, key_name)),)))
-                    cls.cur.execute(command, (str(getattr(self, key_name)),))
+                        print(cls.cur.mogrify(command, (str(id),)))
+                    cls.cur.execute(command, (str(id),))
                     return other_cls.from_sql_tuple(cls.cur.fetchone())
+                
                 return get_item
-
+            
             def get_items_using_where(key_name, other_cls):
                 def get_items(id):
                     if isinstance(id, uuid.UUID):
@@ -222,11 +223,11 @@ def add_db_functions(*args, **kwargs):
                     if VERBOSE:
                         print(cls.cur.mogrify(command, (id,)))
                     return [cls.from_sql_tuple(sql_tuple) for sql_tuple in cls.cur.fetchall()]
+                
                 return get_items
-
+            
             setattr(cls, f"get_{item_name}", get_items_by_name(key_name, other_cls))
             setattr(cls, f"all_where_{key_name}", get_items_using_where(key_name, other_cls))
-
         
         return cls
     
