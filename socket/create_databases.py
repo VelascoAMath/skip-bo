@@ -41,13 +41,18 @@ CREATE TABLE IF NOT EXISTS public.player (
     user_id uuid NOT NULL,
     hand json NOT NULL,
     stock json NOT NULL,
-    turn_index int4 DEFAULT '-1'::integer NOT NULL,
-    took_action bool DEFAULT false NOT NULL,
-    CONSTRAINT newtableaplayer_pk PRIMARY KEY (id),
+    turn_index serial NOT NULL,
+    took_action boolean DEFAULT false NOT NULL,
+    did_discard bool DEFAULT false NOT NULL,
+    CONSTRAINT player_pk PRIMARY KEY (id),
     CONSTRAINT player_game_fk FOREIGN KEY (game_id) REFERENCES public.game(id) ON DELETE CASCADE,
-    CONSTRAINT player_user_fk FOREIGN KEY (user_id) REFERENCES public."user"(id)
+    CONSTRAINT player_user_fk FOREIGN KEY (user_ud) REFERENCES public."user"(id) ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS player_game_id_idx ON public.player USING btree (game_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id,user_ud);
+CREATE UNIQUE INDEX IF NOT EXISTS player_turn_index_idx ON public.player (turn_index,game_id);
+CREATE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id);
+CREATE INDEX IF NOT EXISTS player_user_ud_idx ON public.player (user_ud);
+
 
 
 

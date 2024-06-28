@@ -14,7 +14,7 @@ from User import User
 from add_db_functions import add_db_functions
 
 
-@add_db_functions(db_name='public.gamebuild', plural_foreign=[('game_id', 'game', Game)], serial_set=set(['sort_key']))
+@add_db_functions(db_name='public.gamebuild', plural_foreign=[('game_id', 'game', Game)], serial_set={'sort_key'})
 @dataclasses.dataclass(order=True)
 class GameBuild:
     id: uuid.UUID = dataclasses.field(default_factory=lambda: uuid.uuid4())

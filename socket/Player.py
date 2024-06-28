@@ -14,7 +14,8 @@ from add_db_functions import add_db_functions
 
 
 @add_db_functions(db_name='public.player', unique_indices=[('game_id', 'user_id')],
-                  plural_foreign=[('game_id', 'games', Game), ('user_id', 'users', User)])
+                  plural_foreign=[('game_id', 'games', Game), ('user_id', 'users', User)],
+                  serial_set={'turn_index'})
 @dataclasses.dataclass(order=True)
 class Player:
     id: uuid.UUID = dataclasses.field(default_factory=lambda: uuid.uuid4())
@@ -25,6 +26,7 @@ class Player:
     # Does this player go first, second, etc
     turn_index: int = -1
     took_action: bool = False
+    did_discard: bool = False
     
     cur: ClassVar[psycopg2.extensions.cursor] = None
     
@@ -40,6 +42,7 @@ class Player:
             "stock": self.stock.to_json_dict(),
             "turn_index": self.turn_index,
             "took_action": self.took_action,
+            "did_discard": self.did_discard,
         }
     
     @staticmethod
@@ -57,6 +60,7 @@ class Player:
             stock=CardCollection.from_json_dict(data["stock"]),
             turn_index=data["turn_index"],
             took_action=data["took_action"],
+            did_discard=data["did_discard"],
         )
     
     @classmethod
@@ -97,13 +101,17 @@ def main():
             user_id uuid NOT NULL,
             hand json NOT NULL,
             stock json NOT NULL,
-            turn_index int DEFAULT -1 NOT NULL,
-            took_action bool DEFAULT false NOT NULL,
-            CONSTRAINT newtableaplayer_pk PRIMARY KEY (id),
+            turn_index serial NOT NULL,
+            took_action boolean DEFAULT false NOT NULL,
+            did_discard bool DEFAULT false NOT NULL,
+            CONSTRAINT player_pk PRIMARY KEY (id),
             CONSTRAINT player_game_fk FOREIGN KEY (game_id) REFERENCES public.game(id) ON DELETE CASCADE,
-            CONSTRAINT player_user_fk FOREIGN KEY (user_id) REFERENCES public."user"(id)
+            CONSTRAINT player_user_fk FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE
         );
         CREATE UNIQUE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id,user_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS player_turn_index_idx ON public.player (turn_index,game_id);
+        CREATE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id);
+        CREATE INDEX IF NOT EXISTS player_user_id_idx ON public.player (user_id);
         """)
         conn.commit()
         
