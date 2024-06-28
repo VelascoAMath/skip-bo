@@ -129,7 +129,7 @@ def main():
         deck = CardCollection()
         discard = CardCollection()
         game = Game(id=uuid.UUID('3e53d560-c0d1-4871-809e-19a087210f43'), deck=deck, discard=discard,
-                    owner=alfredo.id,
+                    host=alfredo.id,
                     current_user_id=naly.id, winner=alfredo.id)
         game.save()
         

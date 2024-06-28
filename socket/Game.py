@@ -23,7 +23,7 @@ class Game:
     # Reference User
     current_user_id: uuid.UUID = None
     # The player who originally created the game
-    owner: uuid.UUID = None
+    host: uuid.UUID = None
     # If the game has started
     in_progress: bool = False
     # References User
@@ -36,7 +36,7 @@ class Game:
             "deck": self.deck.to_json_dict(),
             "discard": self.discard.to_json_dict(),
             "current_user_id": str(self.current_user_id),
-            "owner": str(self.owner),
+            "host": str(self.host),
             "in_progress": self.in_progress,
             "winner": str(self.winner) if self.winner is not None else None,
         }
@@ -54,7 +54,7 @@ class Game:
         return Game(id=uuid.UUID(data["id"]), deck=CardCollection.from_json_dict(data["deck"]),
                     discard=CardCollection.from_json_dict(data["discard"]),
                     current_user_id=uuid.UUID(data["current_user_id"]),
-                    owner=uuid.UUID(data["owner"]), in_progress=data["in_progress"],
+                    host=uuid.UUID(data["host"]), in_progress=data["in_progress"],
                     winner=uuid.UUID(data["winner"]) if data["winner"] is not None else None)
     
     @classmethod
@@ -83,7 +83,7 @@ def main():
     discard = CardCollection([deck.pop(0) for _ in range(12)])
     
     g = Game(id=uuid.uuid4(), deck=deck, discard=discard, current_user_id=uuid.uuid4(),
-             owner=uuid.uuid4(), in_progress=True, winner=uuid.uuid4())
+             host=uuid.uuid4(), in_progress=True, winner=uuid.uuid4())
     h = Game.fromJSON(g.toJSON())
     print(g == h)
     
@@ -95,17 +95,17 @@ def main():
         cur = conn.cursor()
         cur.execute("""
         CREATE TABLE IF NOT EXISTS public.game (
-        id uuid NOT NULL,
-        deck json NOT NULL,
-        discard json NOT NULL,
-        current_user_id uuid NOT NULL,
-        "owner" uuid NOT NULL,
-        in_progress bool DEFAULT FALSE NOT NULL,
-        winner uuid NULL,
-        CONSTRAINT game_pk PRIMARY KEY (id),
-        CONSTRAINT game_user_current_fk FOREIGN KEY (current_user_id) REFERENCES public."user"(id) ON DELETE CASCADE,
-        CONSTRAINT game_user_owner_fk FOREIGN KEY ("owner") REFERENCES public."user"(id) ON DELETE CASCADE,
-        CONSTRAINT game_user_winner_fk FOREIGN KEY (winner) REFERENCES public."user"(id)
+            id uuid NOT NULL,
+            deck json NOT NULL,
+            "discard" json NOT NULL,
+            current_user_id uuid NOT NULL,
+            "host" uuid NOT NULL,
+            in_progress bool DEFAULT false NOT NULL,
+            winner uuid NULL,
+            CONSTRAINT game_pk PRIMARY KEY (id),
+            CONSTRAINT game_user_current_fk FOREIGN KEY (current_user_id) REFERENCES public."user"(id) ON DELETE CASCADE,
+            CONSTRAINT game_user_host_fk FOREIGN KEY ("host") REFERENCES public."user"(id) ON DELETE CASCADE,
+            CONSTRAINT game_user_winner_fk FOREIGN KEY (winner) REFERENCES public."user"(id) ON DELETE SET NULL
         );
         """)
         
@@ -126,7 +126,7 @@ def main():
         
         print(alfredo)
         print(naly)
-        g = Game(id=uuid.uuid4(), deck=deck, discard=discard, current_user_id=naly.id, owner=alfredo.id,
+        g = Game(id=uuid.uuid4(), deck=deck, discard=discard, current_user_id=naly.id, host=alfredo.id,
                  in_progress=True, winner=None)
         
         print(g)

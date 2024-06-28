@@ -254,13 +254,13 @@ function App() {
               Game {idx + 1}
             </div>
             <hr/>
-            {game.players.filter((player) => player.user_id === game.owner).map((player) => 
+            {game.players.filter((player) => player.user_id === game.host).map((player) => 
               <div key={player.id}>
                 {player.name}
               </div>
             )}
             <hr/>
-            {game.players.filter((player) => player.user_id !== game.owner).map((player) => 
+            {game.players.filter((player) => player.user_id !== game.host).map((player) => 
               <div key={player.id}>
                 {player.name}
               </div>

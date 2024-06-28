@@ -43,23 +43,23 @@ export default function Lobby({props}) {
         <div>
             <div style={{display: "flex", justifyContent: "space-between"}}>
                 <button onClick={() => {sendSocket({type: "create_game", user_id: state["user_id"]})}}>Create Game</button>
-                {selectedGame?.owner === state.user_id && <button onClick={tryToDelete}>DELETE GAME</button>}
+                {selectedGame?.host === state.user_id && <button onClick={tryToDelete}>DELETE GAME</button>}
             </div>
             <div className="game-list">
                 {state["games"]?.map((game) => {
 
                     const players = game.players;
-                    const host = players.filter((player) => player.user_id === game.owner)[0];
-                    const others = players.filter((player) => player.user_id !== game.owner);
+                    const host = players.filter((player) => player.user_id === game.host)[0];
+                    const others = players.filter((player) => player.user_id !== game.host);
 
                     const inGame = players.filter((player) => player.user_id === state.user_id).length > 0;
-                    const isOwner = game.owner === state.user_id;
+                    const isHost = game.host === state.user_id;
                     const inProgress = game.in_progress;
 
 
                     const getButton = function() {
 
-                        if(isOwner && inGame && others.length > 0){
+                        if(isHost && inGame && others.length > 0){
                             const onClick = function(){
                                 if(!inProgress){
                                     sendSocket({type: "start_game", game_id: game.id, user_id: state.user_id});
@@ -69,14 +69,14 @@ export default function Lobby({props}) {
                             }
                             return <button onClick={onClick}>Play</button>
                         }
-                        if(!isOwner && inGame && inProgress){
+                        if(!isHost && inGame && inProgress){
                             return <button onClick={() => { setLocation("/game/" + game.id)}}>Play</button>
                         }
 
-                        if(!isOwner && inGame && !inProgress){
+                        if(!isHost && inGame && !inProgress){
                             return <button onClick={() => {sendSocket({type: "unjoin_game", user_id: state.user_id, game_id: game.id})}}>Unjoin</button>
                         }
-                        if(!isOwner && !inGame && !inProgress){
+                        if(!isHost && !inGame && !inProgress){
                             return <button onClick={() => {sendSocket({type: "join_game", user_id: state.user_id, game_id: game.id})}}>Join</button>
                         }
 
@@ -84,7 +84,7 @@ export default function Lobby({props}) {
                     }
 
                     // No point of displaying this game since you can't join
-                    if (getButton() === null && !isOwner){
+                    if (getButton() === null && !isHost){
                         return;
                     }
 
@@ -93,7 +93,7 @@ export default function Lobby({props}) {
                         gameClass += " selected";
                     }
 
-                    return <div key={game.id} onClick={() => {if(game.owner === state.user_id){if(game === selectedGame){setSelectedGame(null)}else{setSelectedGame(game)}}}} className={gameClass}>
+                    return <div key={game.id} onClick={() => {if(game.host === state.user_id){if(game === selectedGame){setSelectedGame(null)}else{setSelectedGame(game)}}}} className={gameClass}>
                         <div> {inProgress && starFill()} Host: {host.name}</div>
                         <hr/>
                         {others.map((player) => {

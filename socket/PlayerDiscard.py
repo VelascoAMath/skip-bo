@@ -105,7 +105,7 @@ def main():
         deck = CardCollection()
         discard = CardCollection()
         
-        game = Game(deck=deck, discard=discard, owner=alfredo.id, current_user_id=naly.id
+        game = Game(deck=deck, discard=discard, host=alfredo.id, current_user_id=naly.id
                     , winner=alfredo.id)
         game.save()
         

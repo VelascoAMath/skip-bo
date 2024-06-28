@@ -23,13 +23,13 @@ CREATE TABLE IF NOT EXISTS public.game (
     deck json NOT NULL,
     "discard" json NOT NULL,
     current_user_id uuid NOT NULL,
-    "owner" uuid NOT NULL,
+    "host" uuid NOT NULL,
     in_progress bool DEFAULT false NOT NULL,
     winner uuid NULL,
     CONSTRAINT game_pk PRIMARY KEY (id),
     CONSTRAINT game_user_current_fk FOREIGN KEY (current_user_id) REFERENCES public."user"(id) ON DELETE CASCADE,
-    CONSTRAINT game_user_owner_fk FOREIGN KEY ("owner") REFERENCES public."user"(id) ON DELETE CASCADE,
-    CONSTRAINT game_user_winner_fk FOREIGN KEY (winner) REFERENCES public."user"(id)
+    CONSTRAINT game_user_host_fk FOREIGN KEY ("host") REFERENCES public."user"(id) ON DELETE CASCADE,
+    CONSTRAINT game_user_winner_fk FOREIGN KEY (winner) REFERENCES public."user"(id) ON DELETE SET NULL
 );
 
 
@@ -46,12 +46,12 @@ CREATE TABLE IF NOT EXISTS public.player (
     did_discard bool DEFAULT false NOT NULL,
     CONSTRAINT player_pk PRIMARY KEY (id),
     CONSTRAINT player_game_fk FOREIGN KEY (game_id) REFERENCES public.game(id) ON DELETE CASCADE,
-    CONSTRAINT player_user_fk FOREIGN KEY (user_ud) REFERENCES public."user"(id) ON DELETE CASCADE
+    CONSTRAINT player_user_fk FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id,user_ud);
+CREATE UNIQUE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id,user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS player_turn_index_idx ON public.player (turn_index,game_id);
 CREATE INDEX IF NOT EXISTS player_game_id_idx ON public.player (game_id);
-CREATE INDEX IF NOT EXISTS player_user_ud_idx ON public.player (user_ud);
+CREATE INDEX IF NOT EXISTS player_user_id_idx ON public.player (user_id);
 
 
 

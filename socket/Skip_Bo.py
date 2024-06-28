@@ -376,7 +376,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
             case "create_game":
                 user = User.get_by_id(message["user_id"])
                 
-                game = Game(owner=user.id, current_user_id=user.id)
+                game = Game(host=user.id, current_user_id=user.id)
                 game.save()
                 player = Player(game_id=game.id, user_id=user.id)
                 player.save()
@@ -390,7 +390,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                 user = User.get_by_id(message["user_id"])
                 game = Game.get_by_id(message["game_id"])
                 
-                if game.owner != user.id:
+                if game.host != user.id:
                     await websocket.send(json.dumps({"type": "rejection",
                                                      "message": f"You can't delete game {game.id} since you are not the host!"}))
                     continue
@@ -436,9 +436,9 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                 user_id = message["user_id"]
                 game = Game.get_by_id(game_id)
                 
-                if str(game.owner) != user_id:
+                if str(game.host) != user_id:
                     await websocket.send(
-                        json.dumps({"type": "rejection", "message": f"You are not the owner of {game.id}!"}))
+                        json.dumps({"type": "rejection", "message": f"You are not the host of {game.id}!"}))
                     continue
                 if game.in_progress:
                     await websocket.send(
@@ -549,7 +549,7 @@ def main():
                     message = {"type": "rejection", "message": "Not a valid player!"}
             case "cg":
                 if u is not None:
-                    g = Game(id=uuid.UUID('a5ba4c0c-19cf-4dde-b9d4-b2431794efa1'), owner=u.id, current_user_id=u.id)
+                    g = Game(id=uuid.UUID('a5ba4c0c-19cf-4dde-b9d4-b2431794efa1'), host=u.id, current_user_id=u.id)
                     g.save()
                     p = Player(user_id=u.id, game_id=g.id)
                     p.save()
