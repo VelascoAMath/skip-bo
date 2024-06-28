@@ -9,6 +9,10 @@ h3 {
   margin: 10px;
 }
 
+.home a {
+  color: white;
+}
+
 .card {
   border-color: white;
   border-width: 0.5px;
@@ -67,7 +71,7 @@ h3 {
   overflow-x: scroll;
 }
 .players-in-room-view .player-view {
-  border: orange 1px solid;
+  border: orange 3px solid;
   width: 100%;
 }
 
@@ -113,7 +117,7 @@ h3 {
   display: flex;
   align-items: center;
   min-height: 20px;
-  background-color: purple;
+  background-color: plum;
 }
 .build-piles .selected {
   border: aqua solid 2px;

@@ -156,11 +156,15 @@ def replenish_player_hand(player: Player, game: Game):
 
 
 def process_player_move(message):
+    player_id = message["player_id"]
+    player = Player.get_by_id(player_id)
+    game = Game.get_by_id(player.game_id)
+
+    if game.current_user_id != player.user_id:
+        return {"type": "rejection", "message": "It's not your turn!"}
+
     match message["type"]:
         case "draw":
-            player_id = message["player_id"]
-            player = Player.get_by_id(player_id)
-            game = Game.get_by_id(player.game_id)
             
             player.hand.append(game.deck.pop())
             player.save()
@@ -169,7 +173,6 @@ def process_player_move(message):
             return {"type": "acceptance"}
         
         case "hand_to_build":
-            player_id = message["player_id"]
             build_id = message["build_id"]
             card_id_list = message["cards"]
             
@@ -221,7 +224,6 @@ def process_player_move(message):
             return {"type": "acceptance"}
         
         case "hand_to_discard":
-            player_id = message["player_id"]
             discard_id = message["discard_id"]
             card_id_list = message["cards"]
             
@@ -260,10 +262,8 @@ def process_player_move(message):
             return {"type": "acceptance"}
         
         case "play_stock":
-            player_id = message["player_id"]
             build_id = message["build_id"]
-            
-            player = Player.get_by_id(player_id)
+
             bp = GameBuild.get_by_id(build_id)
             
             if bp.game_id != player.game_id:
@@ -318,9 +318,6 @@ def process_player_move(message):
             return {"type": "acceptance"}
         
         case "finish_turn":
-            player_id = message["player_id"]
-            player = Player.get_by_id(player_id)
-            game = Game.get_by_id(player.game_id)
             
             if game.current_user_id != player.user_id:
                 return {"type": "rejection", "message": "It's not your turn!"}
@@ -332,9 +329,6 @@ def process_player_move(message):
             
             players.sort(key=lambda p: p.turn_index)
             player_index = players.index(player)
-            if player_index == -1:
-                print(f"{player=} {players=}")
-                raise Exception("WTF")
             
             player_index = (player_index + 1) % len(players)
             player.took_action = False

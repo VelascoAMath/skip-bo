@@ -9,7 +9,7 @@ import GameRoom from './GameRoom';
 
 
 
-const socket = new WebSocket("ws://172.16.28.211:8002");
+const socket = new WebSocket("ws://localhost:8002");
 
 export function sendSocket(message){
   socket.send(JSON.stringify(message));
@@ -116,7 +116,7 @@ function App() {
 
       </div>
       <Route path="/">
-      <div style={{color: "white"}}>
+      <div className="home">
         <h1>
           <Link href='/user'>Create User</Link>
         </h1>

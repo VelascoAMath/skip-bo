@@ -15,7 +15,7 @@ function rankToColor(rank){
       case 'G':
         return 'green';
       case 'Y':
-        return 'yellow';
+        return 'purple';
       default:
         return 'black';
     }
@@ -73,6 +73,14 @@ export default function GameRoom({props}) {
     
     if(state.user_id === null || state.user_id === undefined){
         return <div>Must Log In</div>
+    }
+
+    if(game.winner){
+        if(game.winner === player.user_id){
+            return <h1>You win!!!</h1>
+        } else {
+            return <h1>Sucks to be a loser</h1>
+        }
     }
     
     const isMyTurn = game.current_user_id === player.user_id;
@@ -152,7 +160,7 @@ export default function GameRoom({props}) {
                         return (
                             <div className={"discard-pile" + (dp.id === selectedDiscard ? " selected": "")} onClick={() => {if(dp.id === selectedDiscard){ setSelectedDiscard(null) }else{setSelectedDiscard(dp.id)} }}>
                                 {cardCollectionDiv(dp.deck)}
-                                {(dp.deck.length > 0) && (selectedBuild !== null) && <button onClick={() => {sendSocket({type: "play_discard", discard_id: dp.id, build_id: selectedBuild})}}>Play Discard</button>}
+                                {(dp.deck.length > 0) && (selectedBuild !== null) && <button onClick={() => {sendSocket({type: "play_discard", player_id: player.id, discard_id: dp.id, build_id: selectedBuild})}}>Play Discard</button>}
                             </div>
                     );
                     })}

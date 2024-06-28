@@ -24,6 +24,12 @@ h3 {
 }
 
 
+.home{
+    a{
+        color: white;
+    }
+}
+
 .card {
     border-color: white;
     border-width: 0.5px;
@@ -89,7 +95,7 @@ h3 {
     overflow-x: scroll;
 
     .player-view {
-        border: orange 1px solid;
+        border: orange 3px solid;
         width: 100%;
     }
 }
@@ -169,7 +175,8 @@ h3 {
         
         min-height: $card-height;
 
-        background-color: purple;
+        background-color: plum
+        ;
         
     }
     
