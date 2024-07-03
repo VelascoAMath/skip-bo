@@ -7,7 +7,7 @@
 
 export default function Login({props}){
     
-    const {state, dispatch, socket} = props;
+    const {state, dispatch} = props;
 
 
 

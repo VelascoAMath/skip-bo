@@ -41,7 +41,7 @@ def test_can_add_card():
     gb.deck.append(Card(color=Color.BLUE, rank=Rank.NINE))
     gb.deck.append(Card(color=Color.WILD, rank=Rank.WILD))
     gb.deck.append(Card(color=Color.RED, rank=Rank.ELEVEN))
-    assert gb.can_add_cards(Card(color=Color.YELLOW, rank=Rank.TWELVE))
+    assert gb.can_add_cards([Card(color=Color.YELLOW, rank=Rank.TWELVE)])
 
     gb.deck.append(Card(color=Color.BLUE, rank=Rank.TWELVE))
     

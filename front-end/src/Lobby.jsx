@@ -19,9 +19,9 @@ const starFill = function(){
 
 export default function Lobby({props}) {
 
-    const {state, dispatch, socket} = props;
+    const {state} = props;
     const [selectedGame, setSelectedGame] = useState(null);
-    const [location, setLocation] = useLocation();
+    const [, setLocation] = useLocation();
     
     if(state["user_name"] === null || state["user_id"] === null || state["user_token"] === null){
         return <div>Must Log In</div>
@@ -85,7 +85,7 @@ export default function Lobby({props}) {
 
                     // No point of displaying this game since you can't join
                     if (getButton() === null && !isHost){
-                        return;
+                        return null;
                     }
 
                     let gameClass = "game";

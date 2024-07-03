@@ -24,6 +24,9 @@ yarn-error.log*
 
 
 socket/database.ini
+*~
+data/
+
 
 
 # Byte-compiled / optimized / DLL files

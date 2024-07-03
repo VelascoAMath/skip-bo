@@ -18,6 +18,8 @@ from Player import Player
 from PlayerDiscard import PlayerDiscard
 from User import User
 
+import create_databases
+
 parser = ConfigParser()
 parser.read('database.ini')
 config = dict(parser.items('postgresql'))
@@ -525,7 +527,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
 
 
 async def start_server():
-    async with serve(process_messages, "", 8002):
+    async with serve(process_messages, "", 8000):
         await asyncio.Future()  # run forever
 
 

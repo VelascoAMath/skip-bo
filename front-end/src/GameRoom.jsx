@@ -1,7 +1,6 @@
 import { useParams } from "wouter";
 import { sendSocket } from "./App";
 import { useEffect, useState } from "react";
-import Login from "./Login";
 
 
 
@@ -29,7 +28,7 @@ const cardToDiv = function(card) {
 
 function cardCollectionDiv(cardList) {
     return (
-      <div className='card-collection'>{cardList.map((card, idx) => {
+      <div className='card-collection'>{cardList.map((card) => {
         return cardToDiv(card);
       })}</div>  
     );
@@ -48,12 +47,12 @@ export default function GameRoom({props}) {
     const [selectedBuild, setSelectedBuild] = useState(null);
     const [selectedDiscard, setSelectedDiscard] = useState(null);
 
-    const {state, dispatch, socket} = props;
+    const {state, dispatch} = props;
 
     
     // Update our game id
     useEffect(() => {
-        if(state?.game_id != game_id){
+        if(state?.game_id !== game_id){
             dispatch({type: "change-input", key: "game_id", value: game_id});
         }
     })
