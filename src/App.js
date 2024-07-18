@@ -6,6 +6,7 @@ import Create_User from './Create_User';
 import Login from './Login';
 import Lobby from './Lobby';
 import GameRoom from './GameRoom';
+import Help from './Help';
 
 
 
@@ -112,7 +113,7 @@ function App() {
         {state?.user_name && <div>{state?.user_name}</div>}
         {!(state?.user_name) && <div style={{color: "red"}}>Guest</div>}
         <Link href="/">Home</Link>
-        <div></div>
+        <Link href="/help">Help</Link>
 
       </div>
       <Route path="/">
@@ -140,6 +141,9 @@ function App() {
       </Route>
       <Route path="/game/:id">
         <GameRoom props={{state, dispatch, socket}}/>
+      </Route>
+      <Route path="/help">
+        <Help props={{state, dispatch, socket}}/>
       </Route>
     </div>
   )
