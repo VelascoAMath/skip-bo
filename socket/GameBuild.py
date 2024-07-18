@@ -33,7 +33,6 @@ class GameBuild:
         if len(card_list) == 0:
             return True
         
-        expected_rank = get_num_ranks()[len(self.deck)]
         expected_index = len(self.deck) % len(get_num_ranks())
         
         for card in card_list:

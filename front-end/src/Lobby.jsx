@@ -85,7 +85,7 @@ export default function Lobby({props}) {
 
                     // No point of displaying this game since you can't join
                     if (getButton() === null && !isHost){
-                        return null;
+                        return <div/>;
                     }
 
                     let gameClass = "game";
