@@ -1,8 +1,8 @@
 import { useReducer, useState } from 'react';
 import './App.css';
 import inputReducer from './InputReducer';
-import { Link, Route, Switch } from 'wouter';
-import Create_User from './Create_User';
+import { Link, Route } from 'wouter';
+import CreateUser from './CreateUser';
 import Login from './Login';
 import Lobby from './Lobby';
 import GameRoom from './GameRoom';
@@ -131,7 +131,7 @@ function App() {
       </Route>
 
       <Route path="/user">
-        <Create_User props={{state, dispatch, socket}}/>
+        <CreateUser props={{state, dispatch, socket}}/>
       </Route>
       <Route path="/login">
         <Login props={{state, dispatch, socket}}/>

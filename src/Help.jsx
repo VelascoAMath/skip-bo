@@ -2,9 +2,8 @@ import SkipBoGameLayout from "./SkipBoGameLayout";
 
 
 
-export default function Help({props}){
+export default function Help(){
 
-    const {state, dispatch, socket} = props;
 
     const h3_style  = {display: "flex", alignItems: "baseline", whiteSpace: "nowrap"};
 

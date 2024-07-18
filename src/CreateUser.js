@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { sendSocket } from "./App";
 
 
-export default function Create_User({props}) {
+export default function CreateUser({props}) {
 
-    const {state, dispatch, socket} = props;
+    const {state} = props;
     const [name, setName] = useState("");
 
     const submitName = function(){
