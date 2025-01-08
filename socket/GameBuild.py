@@ -68,7 +68,7 @@ class GameBuild(BaseModel):
         )
     
     class Meta:
-        table_name = 'player'
+        table_name = 'gamebuild'
 
 
 def main():
