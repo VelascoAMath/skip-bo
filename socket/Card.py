@@ -169,23 +169,6 @@ class Card:
                 f"Cannot create a card with color {self.color} and rank {self.rank}!"
             )
     
-    @staticmethod
-    def getNewDeck():
-        deck = []
-        for color in Color:
-            if color is Color.WILD:
-                continue
-            for rank in Rank:
-                if rank is Rank.WILD:
-                    continue
-                deck.append(Card(color, rank))
-                deck.append(Card(color, rank))
-                deck.append(Card(color, rank))
-        
-        for _ in range(18):
-            deck.append(Card(Color.WILD, Rank.WILD))
-        return deck
-    
     def __lt__(self, other):
         if isinstance(other, Card):
             return (self.color.value, self.rank.value) < (other.color.value, other.rank.value)
