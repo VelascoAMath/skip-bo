@@ -16,7 +16,7 @@ from User import User
 @dataclasses.dataclass(order=True, init=False)
 class GameBuild(BaseModel):
     game: Game | ForeignKeyField = ForeignKeyField(column_name='game_id', field='id', model=Game)
-    deck: CardCollection | CardListField = CardListField()
+    deck: CardCollection | CardListField = CardListField(default=lambda: CardCollection(), null=False)
     sort_key: int | IntegerField = IntegerField(
         constraints=[SQL("DEFAULT nextval('gamebuild_sort_key_seq'::regclass)")], unique=True)
     

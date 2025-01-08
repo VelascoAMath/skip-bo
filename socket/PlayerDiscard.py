@@ -16,7 +16,7 @@ from User import User
 @dataclasses.dataclass(order=True, init=False)
 class PlayerDiscard(BaseModel):
     player: Player | ForeignKeyField = ForeignKeyField(column_name='player_id', field='id', model=Player)
-    deck: CardCollection | CardListField = CardListField()
+    deck: CardCollection | CardListField = CardListField(default=lambda: CardCollection(), null=False)
     sort_key: int | IntegerField = IntegerField(
         constraints=[SQL("DEFAULT nextval('playerdiscard_sort_key_seq'::regclass)")], unique=True)
     
