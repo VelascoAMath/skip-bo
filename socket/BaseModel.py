@@ -4,12 +4,24 @@ from configparser import ConfigParser
 
 import peewee
 
+from CardCollection import CardCollection
+
 parser = ConfigParser()
 # Use this one when testing
 # parser.read('database_test.ini')
 parser.read("database.ini")
 postgres_args = dict(parser.items("postgresql"))
 db = peewee.PostgresqlDatabase(**postgres_args)
+
+
+class CardListField(peewee.Field):
+    field_type = "json"
+    
+    def db_value(self, value: CardCollection) -> str:
+        return value.to_json()
+    
+    def python_value(self, value: list[dict[str:str]]) -> CardCollection:
+        return CardCollection.from_json_dict(value)
 
 
 class BaseModel(peewee.Model):
@@ -26,5 +38,3 @@ class BaseModel(peewee.Model):
     
     class Meta:
         database = db
-
-
