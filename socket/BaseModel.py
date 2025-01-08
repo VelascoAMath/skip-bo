@@ -18,6 +18,7 @@ db.execute_sql(
     """
 create sequence if not exists gamebuild_sort_key_seq AS integer;
 create sequence if not exists player_turn_index_seq AS integer;
+create sequence if not exists playerdiscard_sort_key_seq AS integer;
 """
 )
 
