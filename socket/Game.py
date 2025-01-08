@@ -3,43 +3,50 @@ import json
 import random
 import uuid
 from configparser import ConfigParser
-from typing import ClassVar, Self
 
-import psycopg2.extensions
+import peewee
 
+from BaseModel import BaseModel, CardListField
 from Card import Card
 from CardCollection import CardCollection
 from User import User
-from add_db_functions import add_db_functions
 
 
-@add_db_functions(db_name='public.game')
-@dataclasses.dataclass(order=True)
-class Game:
-    id: uuid.UUID = dataclasses.field(default_factory=lambda: uuid.uuid4())
+@dataclasses.dataclass(order=True, init=False)
+class Game(BaseModel):
     # Reference CardCollection
-    deck: CardCollection = dataclasses.field(default_factory=CardCollection)
-    discard: CardCollection = dataclasses.field(default_factory=CardCollection)
+    deck: CardCollection | CardListField = CardListField(null=False, default=lambda: CardCollection())
+    discard: CardCollection | CardListField = CardListField(null=False, default=lambda: CardCollection())
     # Reference User
-    current_user_id: uuid.UUID = None
+    current_user: User | peewee.ForeignKeyField = peewee.ForeignKeyField(
+        column_name="current_user", field="id", model=User
+    )
+    
     # The player who originally created the game
-    host: uuid.UUID = None
+    host: User | peewee.ForeignKeyField = peewee.ForeignKeyField(backref='user_host_set', column_name='host',
+                                                                 field='id', model=User)
+    
     # If the game has started
-    in_progress: bool = False
+    in_progress: bool | peewee.BooleanField = peewee.BooleanField(null=False, default=False)
     # References User
-    winner: uuid.UUID | None = None
-    cur: ClassVar[psycopg2.extensions.cursor] = None
+    winner: User | peewee.ForeignKeyField = peewee.ForeignKeyField(backref='user_winner_set', column_name='winner',
+                                                                   field='id', model=User, null=True)
     
     def to_json_dict(self):
-        return {
+        result = {
             "id": str(self.id),
             "deck": self.deck.to_json_dict(),
             "discard": self.discard.to_json_dict(),
-            "current_user_id": str(self.current_user_id),
-            "host": str(self.host),
             "in_progress": self.in_progress,
-            "winner": str(self.winner) if self.winner is not None else None,
         }
+        if self.current_user is not None:
+            result["current_user_id"] = str(self.current_user.id)
+        if self.host is not None:
+            result["host"] = str(self.host.id)
+        if self.winner is not None:
+            result["winner"] = str(self.winner.id)
+        
+        return result
     
     def toJSON(self):
         return json.dumps(self.to_json_dict())
@@ -47,33 +54,24 @@ class Game:
     @staticmethod
     def from_json(data):
         data = json.loads(data)
-        return Game.fromJSONDict(data)
+        return Game.from_json_dict(data)
     
     @staticmethod
     def from_json_dict(data):
         return Game(id=uuid.UUID(data["id"]), deck=CardCollection.from_json_dict(data["deck"]),
                     discard=CardCollection.from_json_dict(data["discard"]),
-                    current_user_id=uuid.UUID(data["current_user_id"]),
-                    host=uuid.UUID(data["host"]), in_progress=data["in_progress"],
-                    winner=uuid.UUID(data["winner"]) if data["winner"] is not None else None)
-    
-    @classmethod
-    def get_by_id(cls, id: str|uuid.UUID) -> Self:
-        pass
-
-    @classmethod
-    def all(cls) -> list[Self]:
-        pass
-    
-    @classmethod
-    def set_cursor(cls, cur:psycopg2.extensions.cursor) -> None:
-        pass
-    
-    def save(self) -> None:
-        pass
+                    current_user_id=User.get_by_id(data["current_user_id"]),
+                    host=User.get_by_id(data["host"]), in_progress=data["in_progress"],
+                    winner=User.get_by_id(data["winner"]) if "winner" in data is not None else None)
 
 
 def main():
+    parser = ConfigParser()
+    parser.read("database.ini")
+    postgres_args = dict(parser.items("postgresql"))
+    db = peewee.PostgresqlDatabase(**postgres_args)
+    db.create_tables([Game, User])
+    
     deck = CardCollection(Card.getNewDeck())
     
     random.seed(0)
@@ -82,67 +80,41 @@ def main():
     
     discard = CardCollection([deck.pop(0) for _ in range(12)])
     
-    g = Game(id=uuid.uuid4(), deck=deck, discard=discard, current_user_id=uuid.uuid4(),
-             host=uuid.uuid4(), in_progress=True, winner=uuid.uuid4())
-    h = Game.fromJSON(g.toJSON())
+    if User.exists_by_name("Alfredo"):
+        alfredo = User.get_by_name("Alfredo")
+    else:
+        alfredo = User(name="Alfredo")
+        alfredo.save(force_insert=True)
+    
+    g = Game(deck=deck, discard=discard, host=alfredo, current_user=alfredo, in_progress=True)
+    g.save(force_insert=True)
+    h = Game.from_json(g.toJSON())
     print(g == h)
     
-    parser = ConfigParser()
-    parser.read('database.ini')
-    config = dict(parser.items('postgresql'))
+    if User.exists_by_name("Naly"):
+        naly = User.get_by_name("Naly")
+    else:
+        naly = User(name="Naly")
+        naly.save(force_insert=True)
     
-    with psycopg2.connect(**config) as conn:
-        cur = conn.cursor()
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS public.game (
-            id uuid NOT NULL,
-            deck json NOT NULL,
-            "discard" json NOT NULL,
-            current_user_id uuid NOT NULL,
-            "host" uuid NOT NULL,
-            in_progress bool DEFAULT false NOT NULL,
-            winner uuid NULL,
-            CONSTRAINT game_pk PRIMARY KEY (id),
-            CONSTRAINT game_user_current_fk FOREIGN KEY (current_user_id) REFERENCES public."user"(id) ON DELETE CASCADE,
-            CONSTRAINT game_user_host_fk FOREIGN KEY ("host") REFERENCES public."user"(id) ON DELETE CASCADE,
-            CONSTRAINT game_user_winner_fk FOREIGN KEY (winner) REFERENCES public."user"(id) ON DELETE SET NULL
-        );
-        """)
-        
-        Game.set_cursor(cur)
-        User.set_cursor(cur)
-        
-        if User.exists_by_name("Alfredo"):
-            alfredo = User.get_by_name("Alfredo")
-        else:
-            alfredo = User(name="Alfredo")
-            alfredo.save()
-        
-        if User.exists_by_name("Naly"):
-            naly = User.get_by_name("Naly")
-        else:
-            naly = User(name="Naly")
-            naly.save()
-        
-        print(alfredo)
-        print(naly)
-        g = Game(id=uuid.uuid4(), deck=deck, discard=discard, current_user_id=naly.id, host=alfredo.id,
-                 in_progress=True, winner=None)
-        
-        print(g)
-        g.save()
-        conn.commit()
-        print(dir(g))
-        
-        # p1 = Player(game_id=g.id, user_id=alfredo.id, hand=CardCollection(), stock=CardCollection(), turn_index=0)
-        # p2 = Player(game_id=g.id, user_id=naly.id, hand=CardCollection(), stock=CardCollection(), turn_index=1)
-        # p1.save()
-        # p2.save()
-        
-        g.delete()
-        # p1.delete()
-        # p2.delete()
-        conn.commit()
+    print(alfredo)
+    print(naly)
+    g = Game(id=uuid.uuid4(), deck=deck, discard=discard, current_user_id=naly.id, host=alfredo.id,
+             in_progress=True, winner=None)
+    
+    print(g)
+    g.save()
+    
+    print(g == Game.from_json(g.toJSON()))
+    
+    # p1 = Player(game_id=g.id, user_id=alfredo.id, hand=CardCollection(), stock=CardCollection(), turn_index=0)
+    # p2 = Player(game_id=g.id, user_id=naly.id, hand=CardCollection(), stock=CardCollection(), turn_index=1)
+    # p1.save()
+    # p2.save()
+    
+    g.delete()
+    # p1.delete()
+    # p2.delete()
 
 
 if __name__ == "__main__":
