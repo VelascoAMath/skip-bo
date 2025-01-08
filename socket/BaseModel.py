@@ -13,6 +13,13 @@ parser.read("database.ini")
 postgres_args = dict(parser.items("postgresql"))
 db = peewee.PostgresqlDatabase(**postgres_args)
 
+# Create sequence for player turns
+db.execute_sql(
+    """
+create sequence if not exists gamebuild_sort_key_seq AS integer;
+"""
+)
+
 
 class CardListField(peewee.Field):
     field_type = "json"
