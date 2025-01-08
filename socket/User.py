@@ -42,6 +42,14 @@ class User(BaseModel):
     
     class Meta:
         table_name = 'user'
+    
+    @classmethod
+    def exists_by_name(cls, name: str):
+        return User.get_or_none(User.name == name) is not None
+    
+    @classmethod
+    def get_by_name(cls, name: str):
+        return User.get(User.name == name)
 
 
 def main():
