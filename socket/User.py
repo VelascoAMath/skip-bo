@@ -12,6 +12,7 @@ from BaseModel import BaseModel
 @dataclasses.dataclass(init=False, order=True)
 class User(BaseModel):
     name: str = peewee.TextField(default="", null=False, unique=True)
+    display: str = peewee.TextField(default="", null=False)
     token: str = peewee.TextField(default=lambda: secrets.token_hex(16), null=False)
     
     def toJSON(self):
@@ -21,6 +22,7 @@ class User(BaseModel):
         return {
             "id": str(self.id),
             "name": self.name,
+            "display": self.display,
             "token": self.token,
         }
     
@@ -34,6 +36,7 @@ class User(BaseModel):
         return User(
             id=uuid.UUID(data["id"]),
             name=data["name"],
+            display=data["display"],
             token=data["token"],
         )
     
@@ -51,6 +54,7 @@ def main():
     u = User(
         id=uuid.uuid4(),
         name="Alfredo",
+        display="Alfredo",
         token="secret token",
     )
     
