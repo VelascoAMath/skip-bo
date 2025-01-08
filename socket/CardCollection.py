@@ -1,4 +1,5 @@
 import json
+from typing import Self
 
 from Card import Card, Color, Rank
 
@@ -21,8 +22,8 @@ class CardCollection(list):
         return CardCollection([Card.fromJSONDict(card) for card in data])
     
     @staticmethod
-    def getNewDeck():
-        deck = []
+    def getNewDeck() -> Self:
+        deck = CardCollection()
         for color in Color:
             if color is Color.WILD:
                 continue
