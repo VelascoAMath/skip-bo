@@ -1,12 +1,10 @@
 import dataclasses
 import json
-import pprint
 import uuid
 from configparser import ConfigParser
 from typing import Self
 
 import peewee
-import psycopg2
 from peewee import ForeignKeyField, IntegerField, BooleanField, SQL
 
 from BaseModel import CardListField, BaseModel
