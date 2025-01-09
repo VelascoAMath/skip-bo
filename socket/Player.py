@@ -59,11 +59,11 @@ class Player(BaseModel):
     
     @classmethod
     def get_by_game_id_user_id(cls, game_id: uuid.UUID | str, user_id: uuid.UUID | str) -> Self:
-        return Player.get_or_none((Player.game.id == game_id) & (Player.user.id == user_id))
+        return Player.get_or_none((Player.game == game_id) & (Player.user == user_id))
     
     @classmethod
     def exists_by_game_id_user_id(cls, game_id: uuid.UUID | str, user_id: uuid.UUID | str) -> bool:
-        return Player.get_or_none((Player.game.id == game_id) & (Player.user.id == user_id)) is not None
+        return Player.get_or_none((Player.game == game_id) & (Player.user == user_id)) is not None
     
     class Meta:
         table_name = 'player'
