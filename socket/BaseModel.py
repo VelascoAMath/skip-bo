@@ -38,6 +38,10 @@ class BaseModel(peewee.Model):
     created_at: datetime.datetime | peewee.DateTimeField(null=False, default=lambda: datetime.datetime.now())
     updated_at: datetime.datetime | peewee.DateTimeField(null=False, default=lambda: datetime.datetime.now())
     
+    @classmethod
+    def exists_by_id(cls, id: uuid.UUID | str) -> bool:
+        return cls.get_or_none(cls.id == id) is not None
+    
     def update_time(self):
         self.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
     
