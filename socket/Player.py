@@ -17,8 +17,8 @@ from User import User
 class Player(BaseModel):
     game: Game | ForeignKeyField = ForeignKeyField(column_name='game_id', field='id', model=Game)
     user: User | ForeignKeyField = ForeignKeyField(column_name='user_id', field='id', model=User)
-    hand: CardCollection | CardListField = CardListField()
-    stock: CardCollection | CardListField = CardListField()
+    hand: CardCollection | CardListField = CardListField(default=lambda: CardCollection())
+    stock: CardCollection | CardListField = CardListField(default=lambda: CardCollection())
     turn_index: int | IntegerField = IntegerField(
         constraints=[SQL("DEFAULT nextval('player_turn_index_seq'::regclass)")])
     took_action: bool | BooleanField = BooleanField(default=False)
