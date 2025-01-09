@@ -1,16 +1,14 @@
 import asyncio
 import json
-import pprint
 import random
 import uuid
 from collections import defaultdict
 from configparser import ConfigParser
 
-import psycopg2
+import peewee
 import websockets
 from websockets import serve
 
-from Card import Card
 from CardCollection import CardCollection
 from Game import Game
 from GameBuild import GameBuild
@@ -19,17 +17,11 @@ from PlayerDiscard import PlayerDiscard
 from User import User
 
 parser = ConfigParser()
-parser.read('database.ini')
-config = dict(parser.items('postgresql'))
+parser.read("database.ini")
+postgres_args = dict(parser.items("postgresql"))
+db = peewee.PostgresqlDatabase(**postgres_args)
 
-conn = psycopg2.connect(**config)
-cur = conn.cursor()
-
-User.set_cursor(cur)
-Game.set_cursor(cur)
-GameBuild.set_cursor(cur)
-Player.set_cursor(cur)
-PlayerDiscard.set_cursor(cur)
+db.create_tables([User, Game, Player, PlayerDiscard, GameBuild])
 
 connected = set()
 game_id_to_socket = defaultdict(set)
@@ -50,14 +42,14 @@ def create_user(name):
     if User.exists_by_name(name):
         return {"type": "rejection", "message": f"User name {name} already exists!"}
     
-    u = User(name=name)
-    u.save()
+    u = User(name=name, display=name)
+    u.save(force_insert=True)
     return {"type": "create_user", "user": u.to_json_dict()}
 
 
 def get_games():
     game_list = []
-    for game in Game.all():
+    for game in Game.select():
         game_json_dict = game.to_json_dict()
         # This call is for the lobby so don't send the actual game state
         del game_json_dict["deck"]
@@ -65,7 +57,7 @@ def get_games():
         
         # Need to include who is in the game
         player_list = []
-        for player in Player.all_where_game_id(game.id):
+        for player in Player.select().where(Player.game == game):
             player_json_dict = player.to_json_dict()
             
             # Already have the game id
@@ -86,18 +78,21 @@ def get_games():
 
 
 def get_game_state(player_id: str | uuid.UUID):
-    player = Player.get_by_id(player_id)
-    game = Game.get_by_id(player.game_id)
+    if not Player.exists_by_id(player_id):
+        return json.dumps({"type": "rejection", "message": f"{player_id} is not a valid player id!"})
+    
+    player: Player = Player.get_by_id(player_id)
+    game = player.game
     game_json = game.to_json_dict()
     
-    game_json["build_piles"] = [gb.to_json_dict() for gb in GameBuild.all_where_game_id(game.id)]
+    game_json["build_piles"] = [gb.to_json_dict() for gb in GameBuild.select().where(GameBuild.game == game)]
     game_json["build_piles"].sort(key=lambda x: x["sort_key"])
     
     del game_json["deck"]
     del game_json["discard"]
     
     player_json = player.to_json_dict()
-    player_json["name"] = User.get_by_id(player.user_id).name
+    player_json["name"] = player.user.name
     
     player_json["stock_size"] = len(player_json["stock"])
     # Only reveal the top stock card
@@ -106,18 +101,18 @@ def get_game_state(player_id: str | uuid.UUID):
     
     # Get the discard piles and sort them
     player_json["discard_piles"] = [pd.to_json_dict() for pd in
-                                    PlayerDiscard.all_where_player_id(player.id)]
+                                    PlayerDiscard.select().where(PlayerDiscard.player == player)]
     player_json["discard_piles"].sort(key=lambda x: x["sort_key"])
     
-    players = Player.all_where_game_id(game.id)
+    players: list[Player] = list(Player.select().where(Player.game == game))
     players.sort(key=lambda p: p.turn_index)
     player_list = []
     for player_mini in players:
         player_mini_json = player_mini.to_json_dict()
-        player_mini_json["name"] = User.get_by_id(player_mini.user_id).name
+        player_mini_json["name"] = player_mini.user.name
         # Get the discard piles and sort them
         player_mini_json["discard_piles"] = [pd.to_json_dict() for pd in
-                                             PlayerDiscard.all_where_player_id(player_mini.id)]
+                                             PlayerDiscard.select().where(PlayerDiscard.player == player_mini)]
         player_mini_json["discard_piles"].sort(key=lambda x: x["sort_key"])
         
         del player_mini_json["hand"]
@@ -126,7 +121,7 @@ def get_game_state(player_id: str | uuid.UUID):
             player_mini_json["stock"] = []
         else:
             player_mini_json["stock"] = [player_mini_json["stock"][-1]]
-        player_mini_json["name"] = User.get_by_id(player_mini.user_id).name
+        player_mini_json["name"] = player_mini.user.name
         player_list.append(player_mini_json)
     
     return json.dumps({"type": "get_room", "game": game_json,
@@ -157,18 +152,20 @@ def replenish_player_hand(player: Player, game: Game):
 
 def process_player_move(message):
     player_id = message["player_id"]
-    player = Player.get_by_id(player_id)
-    game = Game.get_by_id(player.game_id)
-
-    if game.current_user_id != player.user_id:
+    if not Player.exists_by_id(player_id):
+        return {"type": "rejection", "message": f"{player_id} is not a valid id!"}
+    player: Player = Player.get_by_id(player_id)
+    game = player.game
+    
+    if game.current_user != player.user:
         return {"type": "rejection", "message": "It's not your turn!"}
-
+    
     match message["type"]:
         case "draw":
             
             player.hand.append(game.deck.pop())
-            player.save()
-            game.save()
+            player.save_and_update_time()
+            game.save_and_update_time()
             
             return {"type": "acceptance"}
         
@@ -176,11 +173,14 @@ def process_player_move(message):
             build_id = message["build_id"]
             card_id_list = message["cards"]
             
-            player = Player.get_by_id(player_id)
-            bp = GameBuild.get_by_id(build_id)
+            if not GameBuild.exists_by_id(build_id):
+                return {"type": "rejection", "message": f"{build_id} is not a valid Game Build id!"}
             
-            if player.game_id != bp.game_id:
-                return {"type": "rejection", "message": f"Build pile {bp.id} not in the game {player.game_id}!"}
+            player = Player.get_by_id(player_id)
+            bp: GameBuild = GameBuild.get_by_id(build_id)
+            
+            if player.game != bp.game:
+                return {"type": "rejection", "message": f"Build pile {bp.id} not in the game {player.game.id}!"}
             
             hand_id_set = set([str(c.id) for c in player.hand])
             
@@ -204,13 +204,12 @@ def process_player_move(message):
                 player.hand.extend(submission_card_list)
                 return {"type": "rejection",
                         "message": f"Cannot place {submission_card_list} on build pile {bp.id}!"}
-                return
             
             bp.deck.extend(submission_card_list)
             
             player.took_action = True
             
-            game = Game.get_by_id(player.game_id)
+            game = player.game
             while len(bp.deck) >= RANK_SIZE:
                 game.discard.extend(bp.deck[:RANK_SIZE])
                 bp.deck = CardCollection(bp.deck[RANK_SIZE:])
@@ -227,10 +226,12 @@ def process_player_move(message):
             discard_id = message["discard_id"]
             card_id_list = message["cards"]
             
-            player = Player.get_by_id(player_id)
-            dp = PlayerDiscard.get_by_id(discard_id)
+            if not PlayerDiscard.exists_by_id(discard_id):
+                return {"type": "rejection", "message": f"{discard_id} is not a valid player discard id!"}
             
-            if player.id != dp.player_id:
+            dp: PlayerDiscard = PlayerDiscard.get_by_id(discard_id)
+            
+            if player != dp.player:
                 return {"type": "rejection", "message": f"Discard pile {dp.id} not in the game {player.id}!"}
             
             hand_id_set = set([str(c.id) for c in player.hand])
@@ -251,23 +252,26 @@ def process_player_move(message):
             
             player.took_action = True
             
-            game = Game.get_by_id(player.game_id)
+            game = player.game
             
             if len(player.hand) == 0:
                 replenish_player_hand(player, game)
             
-            player.save()
-            game.save()
-            dp.save()
+            player.save_and_update_time()
+            game.save_and_update_time()
+            dp.save_and_update_time()
             return {"type": "acceptance"}
         
         case "play_stock":
             build_id = message["build_id"]
-
-            bp = GameBuild.get_by_id(build_id)
             
-            if bp.game_id != player.game_id:
-                return {"type": "rejection", "message": f"Build pile {bp.id} not in the game {player.game_id}!"}
+            if not GameBuild.exists_by_id(build_id):
+                return {"type": "rejection", "message": f"{build_id} is not a valid build pile id!"}
+            
+            bp: GameBuild = GameBuild.get_by_id(build_id)
+            
+            if bp.game != player.game:
+                return {"type": "rejection", "message": f"Build pile {bp.id} not in the game {player.game.id}!"}
             
             if not bp.can_add_card(player.stock[-1]):
                 return {"type": "rejection", "message": f"Can't place {player.stock[-1]} on build pile {bp.id}!"}
@@ -275,18 +279,18 @@ def process_player_move(message):
             bp.deck.append(player.stock.pop())
             player.took_action = True
             
-            game = Game.get_by_id(player.game_id)
+            game = player.game
             while len(bp.deck) >= RANK_SIZE:
                 game.discard.extend(bp.deck[:RANK_SIZE])
                 bp.deck = CardCollection(bp.deck[RANK_SIZE:])
             
             # Player has won
             if len(player.stock) == 0:
-                game.winner = player.user_id
+                game.winner = player.user
             
-            player.save()
-            game.save()
-            bp.save()
+            player.save_and_update_time()
+            game.save_and_update_time()
+            bp.save_and_update_time()
             
             return {"type": "acceptance"}
         
@@ -294,38 +298,44 @@ def process_player_move(message):
             dp_id = message["discard_id"]
             bp_id = message["build_id"]
             
-            dp = PlayerDiscard.get_by_id(dp_id)
-            bp = GameBuild.get_by_id(bp_id)
+            if not PlayerDiscard.exists_by_id(dp_id):
+                return {"type": "rejection", "message": f"{dp_id} is not a valid player discard id!"}
+            
+            if not GameBuild.exists_by_id(bp_id):
+                return {"type": "rejection", "message": f"{bp_id} is not a valid build pile id!"}
+            
+            dp: PlayerDiscard = PlayerDiscard.get_by_id(dp_id)
+            bp: GameBuild = GameBuild.get_by_id(bp_id)
             
             if not bp.can_add_card(dp.deck[-1]):
                 return {"type": "rejection",
                         "message": f"Can't place {dp.deck[-1]} from discard pile {dp.id} on build pile {bp.id}!"}
             
             bp.deck.append(dp.deck.pop())
-            player = dp.get_player()
+            player = dp.player
             player.took_action = True
             
-            game = Game.get_by_id(player.game_id)
+            game = player.game
             while len(bp.deck) >= RANK_SIZE:
                 game.discard.extend(bp.deck[:RANK_SIZE])
                 bp.deck = CardCollection(bp.deck[RANK_SIZE:])
             
-            game.save()
-            dp.save()
-            bp.save()
-            player.save()
+            game.save_and_update_time()
+            dp.save_and_update_time()
+            bp.save_and_update_time()
+            player.save_and_update_time()
             
             return {"type": "acceptance"}
         
         case "finish_turn":
             
-            if game.current_user_id != player.user_id:
+            if game.current_user != player.user:
                 return {"type": "rejection", "message": "It's not your turn!"}
             
             if not player.took_action:
                 return {"type": "rejection", "message": "Do something first!"}
             
-            players = Player.all_where_game_id(game.id)
+            players = list(Player.select().where(Player.game == game))
             
             players.sort(key=lambda p: p.turn_index)
             player_index = players.index(player)
@@ -334,15 +344,15 @@ def process_player_move(message):
             player.took_action = False
             game.current_user_id = players[player_index].user_id
             
-            player.save()
-            game.save()
+            player.save_and_update_time()
+            game.save_and_update_time()
             
             player = players[player_index]
             
             replenish_player_hand(player, game)
             
-            player.save()
-            game.save()
+            player.save_and_update_time()
+            game.save_and_update_time()
             
             return {"type": "acceptance"}
         
@@ -365,11 +375,10 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
             
             case "create_user":
                 await websocket.send(json.dumps(create_user(message["user_name"])))
-                conn.commit()
             
             case "get_users":
                 await websocket.send(
-                    json.dumps({"type": "get_users", "users": [user.to_json_dict() for user in User.all()]}))
+                    json.dumps({"type": "get_users", "users": [user.to_json_dict() for user in User.select()]}))
             case "get_games":
                 game_list = get_games()
                 await websocket.send(json.dumps({"type": "get_games", "games": game_list}))
@@ -377,26 +386,39 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                 user = User.get_by_id(message["user_id"])
                 
                 game = Game(host=user.id, current_user_id=user.id)
-                game.save()
+                game.save(force_insert=True)
                 player = Player(game_id=game.id, user_id=user.id)
-                player.save()
-                conn.commit()
+                player.save(force_insert=True)
                 await websocket.send(
                     json.dumps({"type": "create_game", "game": game.to_json_dict(), "player": player.to_json_dict()}))
                 game_list = get_games()
                 websockets.broadcast(connected, json.dumps({"type": "get_games", "games": game_list}))
             
             case "delete_game":
-                user = User.get_by_id(message["user_id"])
-                game = Game.get_by_id(message["game_id"])
+                user_id = message["user_id"]
+                game_id = message["game_id"]
                 
-                if game.host != user.id:
-                    await websocket.send(json.dumps({"type": "rejection",
-                                                     "message": f"You can't delete game {game.id} since you are not the host!"}))
+                if not User.exists_by_id(user_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{user_id} is not a valid user id!"}))
+                    continue
+                if not Game.exists_by_id(game_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{game_id} is not a valid game id!"}))
                     continue
                 
-                game.delete()
-                conn.commit()
+                user: User = User.get_by_id(user_id)
+                game: Game = Game.get_by_id(game_id)
+                
+                if game.host != user:
+                    await websocket.send(json.dumps({"type": "rejection",
+                                                     "message": f"You can't delete game {game.id} since you are not "
+                                                                f"the host!"}))
+                    continue
+                
+                Player.delete().where(Player.game == game).execute()
+                game.delete_instance()
+                
                 game_list = get_games()
                 await websocket.send(json.dumps({"type": "delete_game"}))
                 websockets.broadcast(connected, json.dumps({"type": "get_games", "games": game_list}))
@@ -404,39 +426,69 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
             case "join_game":
                 user_id = message["user_id"]
                 game_id = message["game_id"]
-                game = Game.get_by_id(game_id)
+                
+                if not User.exists_by_id(user_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{user_id} is not a valid user id!"}))
+                    continue
+                
+                if not Game.exists_by_id(game_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{game_id} is not a valid game id!"}))
+                    continue
                 
                 if Player.exists_by_game_id_user_id(game_id, user_id):
                     await websocket.send(json.dumps({"type": "rejection", "message": "Already in the game!"}))
                 else:
-                    player = Player(game_id=game_id, user_id=user_id)
-                    player.save()
+                    user = User.get_by_id(user_id)
+                    game = Game.get_by_id(game_id)
+                    player = Player(game=game, user=user)
+                    player.save(force_insert=True)
                     await websocket.send(
                         json.dumps(
                             {"type": "create_game", "game": game.to_json_dict(), "player": player.to_json_dict()}))
                     websockets.broadcast(connected, json.dumps({"type": "get_games", "games": get_games()}))
-                conn.commit()
             case "unjoin_game":
                 user_id = message["user_id"]
                 game_id = message["game_id"]
+                
+                if not User.exists_by_id(user_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{user_id} is not a valid user id!"}))
+                    continue
+                
+                if not Game.exists_by_id(game_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{game_id} is not a valid game id!"}))
+                    continue
                 
                 if not Player.exists_by_game_id_user_id(game_id, user_id):
                     await websocket.send(json.dumps({"type": "rejection", "message": "Not in this game!"}))
                 else:
                     player = Player.get_by_game_id_user_id(game_id, user_id)
                     player.delete()
-                    conn.commit()
                     await websocket.send(
                         json.dumps(
                             {"type": "acceptance"}))
                     websockets.broadcast(connected, json.dumps({"type": "get_games", "games": get_games()}))
-                conn.commit()
             case "start_game":
                 game_id = message["game_id"]
                 user_id = message["user_id"]
-                game = Game.get_by_id(game_id)
                 
-                if str(game.host) != user_id:
+                if not User.exists_by_id(user_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{user_id} is not a valid user id!"}))
+                    continue
+                
+                if not Game.exists_by_id(game_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{game_id} is not a valid game id!"}))
+                    continue
+                
+                game = Game.get_by_id(game_id)
+                user = User.get_by_id(user_id)
+                
+                if game.host != user:
                     await websocket.send(
                         json.dumps({"type": "rejection", "message": f"You are not the host of {game.id}!"}))
                     continue
@@ -445,7 +497,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                         json.dumps({"type": "rejection", "message": f"{game.id} already in progress!"}))
                     continue
                 else:
-                    players = Player.all_where_game_id(game.id)
+                    players: list[Player] = list(Player.select().where(Player.game == game))
                     
                     if len(players) > 6:
                         await websocket.send(json.dumps({"type": "rejection",
@@ -460,7 +512,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                     else:
                         
                         # Create the new deck of cards
-                        deck = Card.getNewDeck()
+                        deck = CardCollection.getNewDeck()
                         random.shuffle(deck)
                         
                         random.shuffle(players)
@@ -475,16 +527,16 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                             else:
                                 while len(player.stock) < 20:
                                     player.stock.append(deck.pop())
-                            player.save()
+                            player.save_and_update_time()
                             
                             # Create the discard piles
                             for _ in range(4):
                                 dp = PlayerDiscard(player_id=player.id)
-                                dp.save()
+                                dp.save(force_insert=True)
                         
                         # Save the deck, first player to go, and mark that it's in progress
                         game.deck = CardCollection(deck)
-                        game.current_user_id = players[0].user_id
+                        game.current_user = players[0].user
                         
                         replenish_player_hand(players[0], game)
                         players[0].save()
@@ -494,15 +546,31 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                         
                         for _ in range(4):
                             bp = GameBuild(game_id=game.id)
-                            bp.save()
+                            bp.save(force_insert=True)
                         
-                        game.save()
-                        conn.commit()
+                        game.save_and_update_time()
                         await websocket.send(json.dumps({"type": "start_game", "game_id": str(game.id)}))
                         websockets.broadcast(connected, json.dumps({"type": "get_games", "games": get_games()}))
             case "get_room":
                 game_id = message["game_id"]
                 user_id = message["user_id"]
+                
+                if not User.exists_by_id(user_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{user_id} is not a valid user id!"}))
+                    continue
+                
+                if not Game.exists_by_id(game_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{game_id} is not a valid game id!"}))
+                    continue
+                
+                if not Player.exists_by_game_id_user_id(game_id, user_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"Game {game_id} and user {user_id} do not "
+                                                                    f"correspond to a player!"}))
+                    continue
+                
                 player = Player.get_by_game_id_user_id(game_id, user_id)
                 
                 game_id_to_socket[player.id].add(websocket)
@@ -511,6 +579,11 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
             
             case "sort_hand":
                 player_id = message["player_id"]
+
+                if not Player.exists_by_id(player_id):
+                    await websocket.send(
+                        json.dumps({"type": "rejection", "message": f"{player_id} is not a valid player id!"}))
+                    continue
                 player = Player.get_by_id(player_id)
                 player.hand.sort(key=lambda c: c.rank.value)
                 player.save()
@@ -519,7 +592,6 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                 await websocket.send(json.dumps(process_player_move(message=message)))
                 for player_id, sockets in game_id_to_socket.items():
                     websockets.broadcast(sockets, get_game_state(player_id))
-        conn.commit()
     
     connected.remove(websocket)
 
@@ -560,7 +632,7 @@ def main():
                 if u is None:
                     message = {"type": "rejection", "message": "Need to login first!"}
                 else:
-                    pprint.pprint(Game.all())
+                    # pprint.pprint(list(Game.select()))
                     id = input("Enter the game id: ").strip()
                     if is_valid_uuid(id):
                         g = Game.get_by_id(id)
@@ -579,7 +651,7 @@ def main():
                 if u is None:
                     message = {"type": "rejection", "message": "Need to login first!"}
                 else:
-                    pprint.pprint(Game.all())
+                    # pprint.pprint(list(Game.select()))
                     id = input("Enter the game id: ").strip()
                     if is_valid_uuid(id):
                         g = Game.get_by_id(id)
@@ -588,7 +660,7 @@ def main():
                             message = {"type": "rejection", "message": f"{g.id} already in progress!"}
                         else:
                             print(dir(Player))
-                            players = Player.all_where_game_id(g.id)
+                            players = list(Player.select().where(Player.game == g))
                             
                             if len(players) > 6:
                                 message = {"type": "rejection",
@@ -601,7 +673,7 @@ def main():
                             else:
                                 
                                 # Create the new deck of cards
-                                deck = Card.getNewDeck()
+                                deck = CardCollection.getNewDeck()
                                 
                                 print(f"{len(deck)=}")
                                 
@@ -650,7 +722,6 @@ def main():
             case _:
                 pass
         print(u, message)
-        conn.commit()
 
 
 if __name__ == '__main__':
