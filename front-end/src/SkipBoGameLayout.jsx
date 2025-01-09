@@ -81,9 +81,9 @@ export default function SkipBoGameLayout() {
       <rect width="70" height="100" stroke="none"/>
       <rect x="1.5" y="1.5" width="67" height="97" fill="none"/>
     </g>
-    <text id="Draw_Pile_Both_Players_" data-name="Draw Pile
-(Both Players)" transform="translate(125 205)" font-size="12" font-family="Arial-Black, Arial Black" font-weight="800"><tspan x="-31.43" y="13">Draw Pile</tspan><tspan x="-46.38" y="30">(Both Players)</tspan></text>
-    <text id="Discard_Piles_Player_A_2" data-name="Discard Piles (Player A)" transform="translate(300 222)" font-size="12" font-family="Arial-Black, Arial Black" font-weight="800"><tspan x="-77.045" y="13">Discard Piles (Player A)</tspan></text>
+    <text id="Draw_Pile_All_Players_" data-name="Draw Pile
+(All Players)" transform="translate(125 205)" font-size="12" font-family="Arial-Black, Arial Black" font-weight="800"><tspan x="-31.43" y="13">Draw Pile</tspan><tspan x="-46.38" y="30">(All Players)</tspan></text>
+    <text id="Discard_Piles_Player_A_2" data-name="Build Piles (All A)" transform="translate(300 222)" font-size="12" font-family="Arial-Black, Arial Black" font-weight="800"><tspan x="-77.045" y="13">Build Piles (All Players)</tspan></text>
   </g>
 </svg>
 );
