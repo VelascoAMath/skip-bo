@@ -134,7 +134,6 @@ export default function GameRoom({props}) {
                         </div>
                     </div>
                     <button onClick={() => {sendSocket({type: "sort_hand", player_id: player.id}); setselectedCards([]); }}>Sort</button>
-                    {isMyTurn && player.took_action  && <button onClick={() => {sendSocket({type: "finish_turn", player_id: player.id}); setselectedCards([]); }}>Finish Turn</button>}
                 </div>
                 <div>
                     <h3>Stock ({player.stock_size})</h3>

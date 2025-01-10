@@ -222,46 +222,6 @@ def process_player_move(message):
             game.save()
             return {"type": "acceptance"}
         
-        case "hand_to_discard":
-            discard_id = message["discard_id"]
-            card_id_list = message["cards"]
-            
-            if not PlayerDiscard.exists_by_id(discard_id):
-                return {"type": "rejection", "message": f"{discard_id} is not a valid player discard id!"}
-            
-            dp: PlayerDiscard = PlayerDiscard.get_by_id(discard_id)
-            
-            if player != dp.player:
-                return {"type": "rejection", "message": f"Discard pile {dp.id} not in the game {player.id}!"}
-            
-            hand_id_set = set([str(c.id) for c in player.hand])
-            
-            if not set(card_id_list) <= hand_id_set:
-                return {"type": "rejection",
-                        "message": f" {set([str(x) for x in card_id_list]) - hand_id_set} are not in player {player.id}'s hand {hand_id_set}!"}
-            
-            for card_id in card_id_list:
-                
-                hand_index = -1
-                for i, card in enumerate(player.hand):
-                    if str(card.id) == card_id:
-                        hand_index = i
-                        break
-                
-                dp.deck.append(player.hand.pop(hand_index))
-            
-            player.took_action = True
-            
-            game = player.game
-            
-            if len(player.hand) == 0:
-                replenish_player_hand(player, game)
-            
-            player.save_and_update_time()
-            game.save_and_update_time()
-            dp.save_and_update_time()
-            return {"type": "acceptance"}
-        
         case "play_stock":
             build_id = message["build_id"]
             
@@ -327,13 +287,47 @@ def process_player_move(message):
             
             return {"type": "acceptance"}
         
-        case "finish_turn":
+        case "hand_to_discard":
+            discard_id = message["discard_id"]
+            card_id_list = message["cards"]
             
-            if game.current_user != player.user:
-                return {"type": "rejection", "message": "It's not your turn!"}
+            if not PlayerDiscard.exists_by_id(discard_id):
+                return {"type": "rejection", "message": f"{discard_id} is not a valid player discard id!"}
             
-            if not player.took_action:
-                return {"type": "rejection", "message": "Do something first!"}
+            if len(card_id_list) > 1:
+                return {"type": "rejection", "message": f"Can only discard one card but {len(card_id_list)} were sent!"}
+            
+            if len(card_id_list) == 0:
+                return {"type": "rejection", "message": f"No card was selected to be discarded!"}
+            
+            dp: PlayerDiscard = PlayerDiscard.get_by_id(discard_id)
+            
+            if player != dp.player:
+                return {"type": "rejection", "message": f"Discard pile {dp.id} not in the game {player.id}!"}
+            
+            hand_id_set = set([str(c.id) for c in player.hand])
+            
+            if not set(card_id_list) <= hand_id_set:
+                return {"type": "rejection",
+                        "message": f" {set([str(x) for x in card_id_list]) - hand_id_set} are not in player {player.id}'s hand {hand_id_set}!"}
+            
+            for card_id in card_id_list:
+                
+                hand_index = -1
+                for i, card in enumerate(player.hand):
+                    if str(card.id) == card_id:
+                        hand_index = i
+                        break
+                
+                dp.deck.append(player.hand.pop(hand_index))
+            
+            player.took_action = True
+            
+            game = player.game
+            
+            player.save_and_update_time()
+            game.save_and_update_time()
+            dp.save_and_update_time()
             
             players = list(Player.select().where(Player.game == game))
             
@@ -578,7 +572,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
             
             case "sort_hand":
                 player_id = message["player_id"]
-
+                
                 if not Player.exists_by_id(player_id):
                     await websocket.send(
                         json.dumps({"type": "rejection", "message": f"{player_id} is not a valid player id!"}))
