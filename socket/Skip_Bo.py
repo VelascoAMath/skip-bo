@@ -416,8 +416,7 @@ async def process_messages(websocket: websockets.legacy.server.WebSocketServerPr
                                                                 f"the host!"}))
                     continue
                 
-                Player.delete().where(Player.game == game).execute()
-                game.delete_instance()
+                game.delete_instance(recursive=True)
                 
                 game_list = get_games()
                 await websocket.send(json.dumps({"type": "delete_game"}))
