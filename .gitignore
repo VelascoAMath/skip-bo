@@ -184,6 +184,7 @@ cython_debug/
 
 
 front-end/node_modules/*
+front-end/src/URL.jsx
 
 
 # PyCharm

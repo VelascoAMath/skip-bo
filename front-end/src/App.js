@@ -7,10 +7,11 @@ import Login from './Login';
 import Lobby from './Lobby';
 import GameRoom from './GameRoom';
 import Help from './Help';
+import URL from './URL';
 
 
 
-const socket = new WebSocket("ws://localhost:8002");
+const socket = new WebSocket(URL);
 
 export function sendSocket(message){
   socket.send(JSON.stringify(message));
